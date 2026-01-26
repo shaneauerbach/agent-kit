@@ -2,6 +2,10 @@
 
 Detailed reference for agent workflows. See `CLAUDE.md` for the essentials.
 
+## Agent Startup Helpers
+
+- `scripts/auto-accept-bypass.exp` auto-accepts the permissions dialog and boots an agent with the standard startup prompt.
+
 ---
 
 ## Label Reference
