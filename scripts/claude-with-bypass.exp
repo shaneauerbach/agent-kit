@@ -1,0 +1,34 @@
+#!/usr/bin/expect -f
+
+# Auto-accept the bypass permissions dialog for Claude Code
+# This script spawns Claude Code and automatically navigates the
+# bypass permissions confirmation dialog.
+
+set timeout 30
+
+# Start Claude Code with bypass permissions flag
+spawn claude --dangerously-skip-permissions
+
+# Wait for the bypass dialog or startup
+expect {
+    -re "Yes, I accept" {
+        # Dialog appeared - send Down arrow to select option 2
+        send "\033\[B"
+        sleep 0.3
+        # Send Enter to confirm selection
+        send "\r"
+        sleep 0.3
+        # Send Enter again if needed (double confirmation)
+        send "\r"
+        # Continue interacting with the process
+        interact
+    }
+    -re "You:.*" {
+        # Already past the dialog (maybe it was skipped)
+        interact
+    }
+    timeout {
+        puts "Timeout waiting for Claude startup"
+        exit 1
+    }
+}

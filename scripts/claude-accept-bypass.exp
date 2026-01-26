@@ -1,0 +1,24 @@
+#!/usr/bin/expect -f
+
+# Auto-accept the bypass permissions dialog for Claude Code
+# Usage: expect claude-accept-bypass.exp <worktree_path>
+
+set timeout 60
+set worktree [lindex $argv 0]
+
+spawn claude --dangerously-skip-permissions
+expect {
+    "Yes, I accept" {
+        # Dialog appeared - navigate to option 2 and confirm
+        send "\033\[B"
+        sleep 0.5
+        send "\r"
+        sleep 0.5
+        send "\r"
+        interact
+    }
+    timeout {
+        puts "Timeout waiting for bypass dialog"
+        exit 1
+    }
+}
