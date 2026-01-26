@@ -1,0 +1,62 @@
+#!/usr/bin/expect -f
+# Auto-accept the bypass permissions dialog for Claude Code
+# and provide initial prompt for agent startup.
+#
+# Usage: auto-accept-bypass.exp <role>
+# Example: auto-accept-bypass.exp engineer
+#
+# NOTE: --dangerously-skip-permissions cannot be used as root,
+# so this script must be run as a non-root user (e.g., 'pok').
+
+set timeout 60
+
+# Get role from argument, default to "engineer" if not provided
+if {[llength $argv] > 0} {
+    set role [lindex $argv 0]
+} else {
+    set role "engineer"
+}
+
+# Map supervisor role names to identity directory names
+if {$role eq "pm"} {
+    set identity_role "product-manager"
+} else {
+    set identity_role $role
+}
+
+spawn claude --dangerously-skip-permissions
+
+# Wait for and accept the bypass permissions dialog
+expect {
+    -re {Yes, I accept} {
+        # Dialog appeared - navigate to option 2 (Yes) and confirm
+        send "\033\[B"
+        sleep 0.3
+        send "\r"
+        sleep 0.3
+        send "\r"
+        # Wait for the prompt to appear
+        expect {
+            -re {❯} {
+                # Send initial prompt to start the agent
+                sleep 1
+                send "Read agents/$identity_role/identity.md and CLAUDE.md. You are the $role daemon. Start your work loop immediately by running the Quick Start commands from your identity file.\r"
+                interact
+            }
+            timeout {
+                puts "Timeout waiting for prompt"
+                exit 1
+            }
+        }
+    }
+    -re {❯} {
+        # Already past the dialog
+        sleep 1
+        send "Read agents/$identity_role/identity.md and CLAUDE.md. You are the $role daemon. Start your work loop immediately by running the Quick Start commands from your identity file.\r"
+        interact
+    }
+    timeout {
+        puts "Timeout waiting for Claude startup"
+        exit 1
+    }
+}
