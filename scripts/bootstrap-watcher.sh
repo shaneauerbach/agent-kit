@@ -1,12 +1,12 @@
 #!/bin/bash
-# /opt/pok/scripts/bootstrap-watcher.sh
+# /opt/pok/agent-kit/scripts/bootstrap-watcher.sh
 # Runs hourly via cron to catch any orphaned work
 
 set -euo pipefail
 
 PID_DIR="/var/run/pok-agents"
 LOG_DIR="/var/log/pok-agents"
-SUMMON_SCRIPT="/opt/pok/scripts/summon-agent.sh"
+SUMMON_SCRIPT="/opt/pok/agent-kit/scripts/summon-agent.sh"
 REPO_DIR="/opt/pok"
 ROLES=("engineer" "qa" "architect" "pm" "operator" "researcher")
 
