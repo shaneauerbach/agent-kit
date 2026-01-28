@@ -6,7 +6,7 @@
 # Example: auto-accept-bypass.exp engineer
 #
 # NOTE: --dangerously-skip-permissions cannot be used as root,
-# so this script must be run as a non-root user (e.g., 'pok').
+# so this script must be run as a non-root user (e.g., project user).
 
 set timeout 60
 
