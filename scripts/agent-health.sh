@@ -1,11 +1,23 @@
 #!/bin/bash
-# /opt/pok/scripts/agent-health.sh
+# agent-health.sh
 # Run via cron every 15 minutes to clean up stale state
 
 set -euo pipefail
 
-PID_DIR="/var/run/pok-agents"
-LOG_DIR="/var/log/pok-agents"
+# Auto-detect project paths from script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# If script is in agent-kit/scripts/, project root is two levels up
+if [[ "$SCRIPT_DIR" == */agent-kit/scripts ]]; then
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+else
+    # Script is directly in project scripts/
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+PROJECT_NAME=$(basename "$PROJECT_ROOT")
+
+# Configuration - can be overridden via environment variables
+PID_DIR="${PID_DIR:-/var/run/${PROJECT_NAME}-agents}"
+LOG_DIR="${LOG_DIR:-/var/log/${PROJECT_NAME}-agents}"
 LOG_FILE="$LOG_DIR/health.log"
 
 mkdir -p "$PID_DIR" "$LOG_DIR"

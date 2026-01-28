@@ -1,13 +1,26 @@
 #!/bin/bash
-# /opt/pok/agent-kit/scripts/bootstrap-watcher.sh
+# bootstrap-watcher.sh
 # Runs hourly via cron to catch any orphaned work
 
 set -euo pipefail
 
-PID_DIR="/var/run/pok-agents"
-LOG_DIR="/var/log/pok-agents"
-SUMMON_SCRIPT="/opt/pok/agent-kit/scripts/summon-agent.sh"
-REPO_DIR="/opt/pok"
+# Auto-detect project paths from script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# If script is in agent-kit/scripts/, project root is two levels up
+if [[ "$SCRIPT_DIR" == */agent-kit/scripts ]]; then
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    SUMMON_SCRIPT="$SCRIPT_DIR/summon-agent.sh"
+else
+    # Script is directly in project scripts/
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    SUMMON_SCRIPT="$SCRIPT_DIR/summon-agent.sh"
+fi
+PROJECT_NAME=$(basename "$PROJECT_ROOT")
+
+# Configuration - can be overridden via environment variables
+PID_DIR="${PID_DIR:-/var/run/${PROJECT_NAME}-agents}"
+LOG_DIR="${LOG_DIR:-/var/log/${PROJECT_NAME}-agents}"
+REPO_DIR="${REPO_DIR:-$PROJECT_ROOT}"
 ROLES=("engineer" "qa" "architect" "pm" "operator" "researcher")
 
 mkdir -p "$PID_DIR" "$LOG_DIR"

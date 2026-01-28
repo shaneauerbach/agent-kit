@@ -1,5 +1,5 @@
 #!/bin/bash
-# /opt/pok/scripts/summon-agent.sh
+# summon-agent.sh
 # Summons an agent to handle specific work. Safe to call multiple times.
 
 set -euo pipefail
@@ -13,12 +13,23 @@ if [[ -z "$ROLE" ]]; then
     exit 1
 fi
 
-# Configuration
-MAX_CONCURRENT_AGENTS=3
-AGENT_TIMEOUT=3600  # 1 hour max per run
-PID_DIR="/var/run/pok-agents"
-LOG_DIR="/var/log/pok-agents"
-WORKTREE_BASE="/opt/pok/worktrees"
+# Auto-detect project paths from script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# If script is in agent-kit/scripts/, project root is two levels up
+if [[ "$SCRIPT_DIR" == */agent-kit/scripts ]]; then
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+else
+    # Script is directly in project scripts/
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+PROJECT_NAME=$(basename "$PROJECT_ROOT")
+
+# Configuration - can be overridden via environment variables
+MAX_CONCURRENT_AGENTS=${MAX_CONCURRENT_AGENTS:-3}
+AGENT_TIMEOUT=${AGENT_TIMEOUT:-3600}  # 1 hour max per run
+PID_DIR="${PID_DIR:-/var/run/${PROJECT_NAME}-agents}"
+LOG_DIR="${LOG_DIR:-/var/log/${PROJECT_NAME}-agents}"
+WORKTREE_BASE="${WORKTREE_BASE:-/opt/${PROJECT_NAME}/worktrees}"
 
 mkdir -p "$PID_DIR" "$LOG_DIR"
 
@@ -80,9 +91,9 @@ fi
 
 # Determine worktree path
 LABEL_ROLE=$(get_label_role "$ROLE")
-WORKTREE="$WORKTREE_BASE/pok-$ROLE"
+WORKTREE="$WORKTREE_BASE/${PROJECT_NAME}-$ROLE"
 if [[ ! -d "$WORKTREE" ]]; then
-    WORKTREE="$WORKTREE_BASE/pok-$LABEL_ROLE"
+    WORKTREE="$WORKTREE_BASE/${PROJECT_NAME}-$LABEL_ROLE"
 fi
 
 if [[ ! -d "$WORKTREE" ]]; then

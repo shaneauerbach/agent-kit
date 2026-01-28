@@ -3,10 +3,25 @@ set -e
 
 ROLE="$1"
 PROMPT="$2"
-WORKTREE="/opt/pok/worktrees/pok-${ROLE}"
+
+# Auto-detect project paths from script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# If script is in agent-kit/scripts/, project root is two levels up
+if [[ "$SCRIPT_DIR" == */agent-kit/scripts ]]; then
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+else
+    # Script is directly in project scripts/
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+PROJECT_NAME=$(basename "$PROJECT_ROOT")
+
+# Configuration - can be overridden via environment variables
+WORKTREE_BASE="${WORKTREE_BASE:-/opt/${PROJECT_NAME}/worktrees}"
+VENV_PATH="${VENV_PATH:-/opt/${PROJECT_NAME}/.venv}"
+WORKTREE="${WORKTREE_BASE}/${PROJECT_NAME}-${ROLE}"
 
 cd "$WORKTREE"
-source /opt/pok/.venv/bin/activate
+source "$VENV_PATH/bin/activate"
 
 echo "=== Starting $ROLE agent at $(date) ==="
 echo "Worktree: $WORKTREE"

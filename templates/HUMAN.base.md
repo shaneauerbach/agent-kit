@@ -1,6 +1,6 @@
 # Human Team Lead Guide
 
-Instructions for the human overseeing the POK agent team.
+Instructions for the human overseeing the agent team.
 
 ---
 
@@ -12,22 +12,22 @@ Instructions for the human overseeing the POK agent team.
 # Copy the permissions block from .claude/settings.json to ~/.claude/settings.json
 
 # 2. Create worktrees for parallel agents
-cd ~/github/pok
-git worktree add ../pok-engineer main
-git worktree add ../pok-qa main
-git worktree add ../pok-pm main
+cd ~/github/<project>
+git worktree add ../<project>-engineer main
+git worktree add ../<project>-qa main
+git worktree add ../<project>-pm main
 ```
 
 ### Launch Agents
 ```bash
 # Engineer
-cd ~/github/pok-engineer && claude "You are the Engineer agent. Read agents/engineer/identity.md, context.md, feedback.md, received-feedback.md and follow CLAUDE.md workflow."
+cd ~/github/<project>-engineer && claude "You are the Engineer agent. Read agents/engineer/identity.md, context.md, feedback.md, received-feedback.md and follow CLAUDE.md workflow."
 
 # QA
-cd ~/github/pok-qa && claude "You are the QA agent. Read agents/qa/identity.md, context.md, feedback.md, received-feedback.md and follow CLAUDE.md workflow."
+cd ~/github/<project>-qa && claude "You are the QA agent. Read agents/qa/identity.md, context.md, feedback.md, received-feedback.md and follow CLAUDE.md workflow."
 
 # PM
-cd ~/github/pok-pm && claude "You are the Product Manager agent. Read agents/product-manager/identity.md, context.md, feedback.md, received-feedback.md and follow CLAUDE.md workflow."
+cd ~/github/<project>-pm && claude "You are the Product Manager agent. Read agents/product-manager/identity.md, context.md, feedback.md, received-feedback.md and follow CLAUDE.md workflow."
 ```
 
 ### Daily Check-In
@@ -46,8 +46,8 @@ Use `/human` command to walk through pending asks, or manually:
 ### Approve a PR
 ```bash
 # Add approval label, remove review request
-gh api repos/OWNER/pok/issues/<num>/labels --method POST --input - <<< '["approved:human"]'
-gh api repos/OWNER/pok/issues/<num>/labels/needs-human-merge --method DELETE
+gh api repos/<owner>/<project>/issues/<num>/labels --method POST --input - <<< '["approved:human"]'
+gh api repos/<owner>/<project>/issues/<num>/labels/needs-human-merge --method DELETE
 ```
 
 ### Answer a Question
@@ -65,9 +65,9 @@ Edit `asks/human.md` - move resolved items to the Resolved table.
 ## Worktree Management
 
 ```bash
-git worktree list                         # See all worktrees
-git worktree add ../pok-architect main    # Add more agents
-git worktree remove ../pok-engineer       # Remove a worktree
+git worktree list                              # See all worktrees
+git worktree add ../<project>-architect main   # Add more agents
+git worktree remove ../<project>-engineer      # Remove a worktree
 ```
 
 Each agent needs its own worktree to avoid git conflicts.
