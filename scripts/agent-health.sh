@@ -13,7 +13,8 @@ else
     # Script is directly in project scripts/
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
-PROJECT_NAME=$(basename "$PROJECT_ROOT")
+# Use PROJECT_NAME env var if set, otherwise derive from directory
+PROJECT_NAME="${PROJECT_NAME:-$(basename "$PROJECT_ROOT")}"
 
 # Configuration - can be overridden via environment variables
 PID_DIR="${PID_DIR:-/var/run/${PROJECT_NAME}-agents}"

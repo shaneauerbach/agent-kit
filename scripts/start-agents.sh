@@ -11,7 +11,8 @@ else
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
     RUN_AGENT_SCRIPT="$SCRIPT_DIR/run-agent.sh"
 fi
-PROJECT_NAME=$(basename "$PROJECT_ROOT")
+# Use PROJECT_NAME env var if set, otherwise derive from directory
+PROJECT_NAME="${PROJECT_NAME:-$(basename "$PROJECT_ROOT")}"
 
 # Configuration - can be overridden via environment variables
 LOG_DIR="${LOG_DIR:-/var/log/${PROJECT_NAME}-agents}"

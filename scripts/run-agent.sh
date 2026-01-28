@@ -13,7 +13,8 @@ else
     # Script is directly in project scripts/
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
-PROJECT_NAME=$(basename "$PROJECT_ROOT")
+# Use PROJECT_NAME env var if set, otherwise derive from directory
+PROJECT_NAME="${PROJECT_NAME:-$(basename "$PROJECT_ROOT")}"
 
 # Configuration - can be overridden via environment variables
 WORKTREE_BASE="${WORKTREE_BASE:-/opt/${PROJECT_NAME}/worktrees}"

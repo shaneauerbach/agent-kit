@@ -13,7 +13,7 @@ if [[ -z "$ROLE" ]]; then
     exit 1
 fi
 
-# Auto-detect project paths from script location
+# Auto-detect project paths from script location (can be overridden via env vars)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # If script is in agent-kit/scripts/, project root is two levels up
 if [[ "$SCRIPT_DIR" == */agent-kit/scripts ]]; then
@@ -22,7 +22,8 @@ else
     # Script is directly in project scripts/
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
-PROJECT_NAME=$(basename "$PROJECT_ROOT")
+# Use PROJECT_NAME env var if set, otherwise derive from directory
+PROJECT_NAME="${PROJECT_NAME:-$(basename "$PROJECT_ROOT")}"
 
 # Configuration - can be overridden via environment variables
 MAX_CONCURRENT_AGENTS=${MAX_CONCURRENT_AGENTS:-3}
