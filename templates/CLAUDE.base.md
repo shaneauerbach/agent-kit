@@ -54,6 +54,30 @@ Run this loop until no work remains:
 
 ---
 
+## TDD WORKFLOW (Test-Driven Development)
+
+For projects using TDD, the workflow is:
+
+1. **QA writes tests first** - QA creates failing tests based on spec
+2. **Engineer implements** - Engineer writes code to pass QA's tests
+3. **QA reviews** - QA verifies implementation passes tests
+
+### TDD Issue Pattern
+- Each feature has a **QA test issue** (e.g., "QA: tests for feature X") and an **Engineer implementation issue** (e.g., "Implement feature X")
+- Engineer issue depends on QA issue (tests must exist first)
+- Engineer **must not modify tests** without QA sign-off
+- "Done" means all tests from the linked QA issue pass
+
+### TDD Dispute Process
+If engineer believes a test is incorrect:
+1. Create dispute issue with labels `agent:qa` + `status:blocked`
+2. Include counterexample and relevant spec section
+3. Add `status:blocked` to engineer issue
+4. QA reviews and either fixes test or explains validity
+5. If unresolved, create `needs-human` issue
+
+---
+
 ## WORKFLOW BASICS
 
 ### Starting an Issue

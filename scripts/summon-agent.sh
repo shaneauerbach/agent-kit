@@ -1,6 +1,7 @@
 #!/bin/bash
 # summon-agent.sh
 # Summons an agent to handle specific work. Safe to call multiple times.
+# Supports TDD workflow and model selection via labels.
 
 set -euo pipefail
 
@@ -44,6 +45,110 @@ get_label_role() {
         product-manager|pm) echo "pm" ;;
         *) echo "$1" ;;
     esac
+}
+
+# Get default provider based on role
+# Engineer/QA default to Codex (clear specs -> code execution)
+# Others default to Claude (reasoning, judgment)
+get_default_provider() {
+    case $1 in
+        engineer|qa) echo "codex" ;;
+        *) echo "claude" ;;
+    esac
+}
+
+# Extract issue number from context string
+extract_issue_number() {
+    if [[ "$CONTEXT" =~ \#([0-9]+) ]]; then
+        echo "${BASH_REMATCH[1]}"
+    fi
+}
+
+# Get repo slug from git remote
+get_repo_slug() {
+    local remote
+    remote=$(git -C "$PROJECT_ROOT" remote get-url origin 2>/dev/null || true)
+    if [[ -z "$remote" ]]; then
+        return 1
+    fi
+    if [[ "$remote" == git@github.com:* ]]; then
+        remote=${remote#git@github.com:}
+    elif [[ "$remote" == https://github.com/* ]]; then
+        remote=${remote#https://github.com/}
+    fi
+    echo "${remote%.git}"
+}
+
+# Check issue labels for provider override
+provider_from_labels() {
+    local issue_number repo_slug labels
+    issue_number=$(extract_issue_number)
+    if [[ -z "$issue_number" ]]; then
+        return 0
+    fi
+    repo_slug=$(get_repo_slug || true)
+    if [[ -z "$repo_slug" ]]; then
+        return 0
+    fi
+    labels=$(gh api "repos/$repo_slug/issues/$issue_number" --jq '.labels[].name' 2>/dev/null || true)
+    if echo "$labels" | grep -q "provider:claude"; then
+        echo "claude"
+        return 0
+    fi
+    if echo "$labels" | grep -q "provider:codex"; then
+        echo "codex"
+        return 0
+    fi
+}
+
+# Check issue labels for model override (e.g., model:codex-xhigh for gpt-5.2-codex)
+model_from_labels() {
+    local issue_number repo_slug labels
+    issue_number=$(extract_issue_number)
+    if [[ -z "$issue_number" ]]; then
+        return 0
+    fi
+    repo_slug=$(get_repo_slug || true)
+    if [[ -z "$repo_slug" ]]; then
+        return 0
+    fi
+    labels=$(gh api "repos/$repo_slug/issues/$issue_number" --jq '.labels[].name' 2>/dev/null || true)
+    # Support various model labels
+    if echo "$labels" | grep -q "model:codex-xhigh"; then
+        echo "gpt-5.2-codex"
+    elif echo "$labels" | grep -q "model:sonnet"; then
+        echo "sonnet"
+    elif echo "$labels" | grep -q "model:opus"; then
+        echo "opus"
+    fi
+}
+
+# Select provider, with fallback if not installed
+select_available_provider() {
+    local provider=$1
+
+    if [[ "$provider" == "codex" ]] && ! command -v codex &>/dev/null; then
+        if command -v claude &>/dev/null; then
+            log "Codex not installed, falling back to Claude"
+            echo "claude"
+            return 0
+        fi
+    fi
+
+    if [[ "$provider" == "claude" ]] && ! command -v claude &>/dev/null; then
+        if command -v codex &>/dev/null; then
+            log "Claude not installed, falling back to Codex"
+            echo "codex"
+            return 0
+        fi
+    fi
+
+    if ! command -v "$provider" &>/dev/null; then
+        log "ERROR: Provider $provider is not installed"
+        exit 1
+    fi
+
+    echo "$provider"
 }
 
 # Atomic lock acquisition using mkdir
@@ -104,14 +209,53 @@ fi
 
 log "Starting agent: $ROLE (context: $CONTEXT)"
 
+# Resolve provider selection (env override > label > role default)
+PROVIDER_OVERRIDE="${AGENT_PROVIDER:-${AGENT_PROVIDER_OVERRIDE:-}}"
+MODEL_OVERRIDE="${AGENT_MODEL:-}"
+
+PROVIDER=""
+if [[ -n "$PROVIDER_OVERRIDE" ]]; then
+    PROVIDER="$PROVIDER_OVERRIDE"
+else
+    PROVIDER="$(provider_from_labels || true)"
+fi
+if [[ -z "$PROVIDER" ]]; then
+    PROVIDER="$(get_default_provider "$ROLE")"
+fi
+
+MODEL="${MODEL_OVERRIDE:-$(model_from_labels || true)}"
+PROVIDER=$(select_available_provider "$PROVIDER")
+
+log "Using provider: $PROVIDER, model: ${MODEL:-default}"
+
 # Start agent in background with timeout
 cd "$WORKTREE"
-timeout --signal=TERM --kill-after=60 "$AGENT_TIMEOUT" \
-    claude --print --dangerously-skip-permissions \
-    "You are the $LABEL_ROLE agent. $CONTEXT. Read agents/$LABEL_ROLE/identity.md, context.md, feedback.md, received-feedback.md then IMMEDIATELY start the autonomous work loop from CLAUDE.md. Do NOT wait for instructions - check GitHub for work and execute autonomously." \
-    >> "$LOG_DIR/$ROLE.log" 2>&1 &
+PROMPT="You are the $LABEL_ROLE agent. $CONTEXT. Read agents/$LABEL_ROLE/identity.md, context.md, feedback.md, received-feedback.md then IMMEDIATELY start the autonomous work loop from CLAUDE.md. Do NOT wait for instructions - check GitHub for work and execute autonomously."
+
+# Build command based on provider
+CLAUDE_CMD=(claude --print --dangerously-skip-permissions)
+CODEX_CMD=(codex exec --dangerously-bypass-approvals-and-sandbox)
+
+# Add model flag if specified
+if [[ -n "$MODEL" ]]; then
+    if [[ "$PROVIDER" == "claude" ]]; then
+        CLAUDE_CMD+=(--model "$MODEL")
+    elif [[ "$PROVIDER" == "codex" ]]; then
+        CODEX_CMD+=(--model "$MODEL")
+    fi
+fi
+
+if [[ "$PROVIDER" == "claude" ]]; then
+    timeout --signal=TERM --kill-after=60 "$AGENT_TIMEOUT" \
+        "${CLAUDE_CMD[@]}" "$PROMPT" \
+        >> "$LOG_DIR/$ROLE.log" 2>&1 &
+else
+    timeout --signal=TERM --kill-after=60 "$AGENT_TIMEOUT" \
+        "${CODEX_CMD[@]}" "$PROMPT" \
+        >> "$LOG_DIR/$ROLE.log" 2>&1 &
+fi
 
 PID=$!
 echo "$PID" > "$PID_DIR/$ROLE.pid"
 
-log "Agent $ROLE started with PID $PID"
+log "Agent $ROLE started with PID $PID (provider: $PROVIDER)"
